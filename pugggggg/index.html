@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Talk to the pug</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fawn: #e4c18e;
+    --mask: #2a1c13;
+    --tongue: #ee6b8b;
+    --paper: #f7e8cf;
+    --err: #b3261e;
+    --display: "Bagel Fat One", "Arial Rounded MT Bold", "Trebuchet MS", sans-serif;
+    --body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--fawn);
+    color: var(--mask);
+    font-family: var(--body);
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-x: hidden;
+  }
+  .screen { min-height: 100%; display: none; align-items: center; justify-content: center; padding: 1.5rem; }
+  .screen.active { display: flex; }
+
+  /* ---------- Gate ---------- */
+  .gate { flex-direction: column; text-align: center; gap: 0; }
+  .gate h1 { font-family: var(--display); font-weight: 400; font-size: clamp(2.2rem, 7vw, 4rem); line-height: 1.05; margin: 0 0 .4rem; }
+  .gate p.sub { margin: 0 0 1.6rem; max-width: 38ch; }
+  .card {
+    background: var(--paper);
+    border: 3px solid var(--mask);
+    border-radius: 28px;
+    padding: 1.8rem;
+    width: min(440px, 100%);
+    box-shadow: 8px 8px 0 var(--mask);
+  }
+  label { display: block; text-align: left; font-weight: 600; margin-bottom: .4rem; }
+  input[type="password"], input[type="text"] {
+    width: 100%; font: inherit; padding: .8rem 1rem; border: 3px solid var(--mask);
+    border-radius: 14px; background: #fff; color: var(--mask);
+  }
+  input:focus-visible, button:focus-visible, a.btn:focus-visible { outline: 4px solid var(--tongue); outline-offset: 3px; }
+  .msg { min-height: 1.5rem; margin: .5rem 0 0; text-align: left; font-weight: 600; color: var(--err); }
+  .msg.ok { color: var(--mask); }
+  .btn {
+    display: block; width: 100%; font: inherit; font-weight: 600; text-align: center; text-decoration: none; cursor: pointer;
+    padding: .8rem 1rem; border: 3px solid var(--mask); border-radius: 14px;
+    background: var(--tongue); color: var(--mask); margin-top: .7rem;
+    transition: transform .08s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(1px); }
+  .btn.alt { background: var(--fawn); }
+  .divider { height: 3px; background: var(--mask); border-radius: 2px; margin: 1.3rem 0 .7rem; opacity: .2; }
+  .hint { font-size: .9rem; margin: .9rem 0 0; text-align: left; }
+  .path { display: none; margin: .7rem 0 0; padding: .6rem .8rem; background: #fff; border: 2px dashed var(--mask); border-radius: 10px; font-family: Consolas, "Courier New", monospace; font-size: .85rem; word-break: break-all; text-align: left; }
+  .path.show { display: block; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%{transform:translateX(-10px)} 40%{transform:translateX(10px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(6px)} }
+
+  /* ---------- Big button ---------- */
+  .truth-btn {
+    font-family: var(--display); font-size: clamp(2.6rem, 10vw, 7rem);
+    padding: .35em .9em; background: var(--mask); color: var(--fawn);
+    border: 0; border-radius: 999px; cursor: pointer;
+    box-shadow: 0 10px 0 var(--tongue);
+    transition: transform .1s ease, box-shadow .1s ease;
+  }
+  .truth-btn:hover { transform: translateY(-4px); box-shadow: 0 14px 0 var(--tongue); }
+  .truth-btn:active { transform: translateY(8px); box-shadow: 0 2px 0 var(--tongue); }
+
+  /* ---------- Collage ---------- */
+  #collage { position: fixed; inset: 0; background: var(--mask); display: none; overflow: hidden; }
+  #collage.active { display: block; }
+  .tile {
+    position: absolute; background: #fff; padding: 8px 8px 8px; border-radius: 4px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    animation: pop .35s cubic-bezier(.2,1.4,.4,1) both;
+  }
+  .tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .tile .ph { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .3rem; font-size: .8rem; text-align: center; padding: .4rem; }
+  .tile .ph b { font-size: 2.4rem; line-height: 1; }
+  @keyframes pop { from { transform: var(--rot) scale(.2); opacity: 0; } to { transform: var(--rot) scale(1); opacity: 1; } }
+  #again { position: fixed; right: 1rem; bottom: 1rem; width: auto; padding: .6rem 1.2rem; z-index: 9999; display: none; }
+  #again.show { display: block; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile { animation: none; transform: var(--rot); }
+    .shake { animation: none; }
+    .btn, .truth-btn { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Screen 1: password gate -->
+<main class="screen gate active" id="gate">
+  <h1>Talk to the pug</h1>
+  <p class="sub">Enter the password from the app to continue.</p>
+  <div class="card">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="off" autofocus>
+    <p class="msg" id="msg" role="status"></p>
+    <button class="btn" id="enter" type="button">Unlock</button>
+
+    <div class="divider"></div>
+
+    <button class="btn alt" id="pathBtn" type="button">Show me where the file is</button>
+    <div class="path" id="pathBox"></div>
+
+    <a class="btn alt" id="dl" href="pugg.py" download="pugg.py">Download pugg.py</a>
+    <p class="hint">go to the file path in your computer.</p>
+  </div>
+</main>
+
+<!-- Screen 2: the big button -->
+<main class="screen" id="truth">
+  <button class="truth-btn" id="truthBtn" type="button">the truth</button>
+</main>
+
+<!-- Screen 3: collage -->
+<section id="collage" aria-live="polite">
+  <button class="btn" id="again" type="button">Replay</button>
+</section>
+
+<script>
+  /* ============ EDIT ME ============ */
+  const PASSWORD = "pugsarenottrustworthy";
+  const FILE_PATH = "J:\\mr potato head\\talk to the pug\\pugg.py";
+
+  // Put your images in the "images" folder next to this file and list them here.
+  const IMAGES = [
+     "images\arthur.jpg",
+     "images\duopug.png",
+     "images\heh.png",
+     "images\lasereyesromanpug.png",
+     "images\lazerroman.png",
+     "images\logan.png",
+     "images\loganraccon.png",
+     "images\lonley.jpg",
+     "images\neonpug.png",
+     "images\puggy.png",
+     "images\pugyroman.png",
+     "images\pugyromanev.png",
+     "images\roman.jpg",
+     "images\romankahn.jpg",
+  ];
+  const SECONDS_BETWEEN_IMAGES = 0.7;
+  /* ================================= */
+
+  const $ = id => document.getElementById(id);
+  const show = id => {
+    document.querySelectorAll('.screen, #collage').forEach(el => el.classList.remove('active'));
+    $(id).classList.add('active');
+  };
+
+  /* --- Password --- */
+  function tryPassword() {
+    const msg = $('msg'), card = document.querySelector('.card');
+    if ($('pw').value === PASSWORD) {
+      msg.textContent = '';
+      show('truth');
+      $('truthBtn').focus();
+    } else {
+      msg.textContent = 'Wrong password. Check the app and try again.';
+      card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+      $('pw').select();
+    }
+  }
+  $('enter').addEventListener('click', tryPassword);
+  $('pw').addEventListener('keydown', e => { if (e.key === 'Enter') tryPassword(); });
+
+  /* --- File path button --- */
+  $('pathBtn').addEventListener('click', async () => {
+    const box = $('pathBox');
+    box.textContent = FILE_PATH;
+    box.classList.add('show');
+    let copied = false;
+    try { await navigator.clipboard.writeText(FILE_PATH); copied = true; } catch (e) {}
+    $('pathBtn').textContent = copied ? 'Path copied. Paste it into File Explorer' : 'Select the path below and copy it';
+  });
+
+  /* --- Collage --- */
+  let timer = null;
+  function buildCollage() {
+    const c = $('collage');
+    c.querySelectorAll('.tile').forEach(t => t.remove());
+    $('again').classList.remove('show');
+    clearInterval(timer);
+
+    const items = IMAGES.length ? IMAGES.slice() : Array.from({ length: 14 }, (_, i) => null);
+    // shuffle
+    for (let i = items.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [items[i], items[j]] = [items[j], items[i]]; }
+
+    const W = window.innerWidth, H = window.innerHeight;
+    const base = Math.max(130, Math.min(W, H) * 0.34);
+    let n = 0;
+
+    function addTile() {
+      if (n >= items.length) { clearInterval(timer); $('again').classList.add('show'); return; }
+      const w = base * (0.8 + Math.random() * 0.6);
+      const h = w * (0.75 + Math.random() * 0.4);
+      const x = Math.random() * Math.max(10, W - w);
+      const y = Math.random() * Math.max(10, H - h);
+      const rot = (Math.random() * 24 - 12).toFixed(1);
+
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+      tile.style.cssText = `width:${w}px;height:${h}px;left:${x}px;top:${y}px;z-index:${n + 1};--rot:rotate(${rot}deg);transform:rotate(${rot}deg)`;
+
+      if (items[n]) {
+        const src = items[n];
+        const img = new Image();
+        img.src = src;
+        img.alt = '';
+        img.onerror = () => { tile.innerHTML = '<div class="ph"><b>?</b>Image not found:<br>' + src + '</div>'; };
+        tile.appendChild(img);
+      } else {
+        tile.innerHTML = '<div class="ph"><b>🐶</b>Add images to the<br>IMAGES list in index.html</div>';
+      }
+      c.appendChild(tile);
+      n++;
+    }
+    addTile();
+    timer = setInterval(addTile, SECONDS_BETWEEN_IMAGES * 1000);
+  }
+
+  $('truthBtn').addEventListener('click', () => {
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    $('collage').classList.add('active');
+    buildCollage();
+  });
+  $('again').addEventListener('click', buildCollage);
+</script>
+</body>
+</html>
